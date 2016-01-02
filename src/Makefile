@@ -13,7 +13,7 @@ ERL = erl -boot start_clean
 # to the end of the line and continue on the next line
 
 # Edit the lines below
-MODS = echo chat_server
+MODS = echo chat_server utils
 
 #       module3 ... special1 ...\
 #       ...
