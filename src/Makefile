@@ -39,6 +39,9 @@ compile: ${MODS:%=%.beam}
 echo: compile
 	${ERL} -noshell -pa . -s echo start Arg1 Arg2 
 
+chat_server: compile
+	${ERL} -pa . -s chat_server start
+
 #	${ERL} -pa Dir1  -s application1 start Arg1 Arg2 
 
 # the subdirs target compiles any code in 

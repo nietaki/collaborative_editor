@@ -11,6 +11,8 @@
 
 -behaviour(gen_server).
 
+-import(utils, [list_contains/2]).
+
 %% API
 -export([start_link/0, start/0, stop/0]).
 
@@ -25,8 +27,11 @@
 -define(SERVER, ?MODULE).
 
 -type user_name() :: atom().
--type client() :: {pid(), user_name()}.
+-type client() :: {pid(), tag(), user_name()}. % the tag() here is the unique tag
+-type tag() :: term().
 -type message() :: {user_name(), string()}.
+-type command() :: {join, user_name()} | {say, string()} | part | get_clients | get_history.
+-type chat_server_response() :: {said, user_name(), string()} | {history, [message()]} | already_joined | unknown_user.
 
 -record(state, {clients=[] :: [client()],messages=[] :: [message()]}).
 
@@ -77,19 +82,37 @@ init([]) ->
 %%
 %% @end
 %%--------------------------------------------------------------------
--spec(handle_call(Request :: term(), From :: {pid(), Tag :: term()},
+-spec(handle_call(Request :: command(), From :: {pid(), Tag :: term()},
     State :: #state{}) ->
-  {reply, Reply :: term(), NewState :: #state{}} |
-  {reply, Reply :: term(), NewState :: #state{}, timeout() | hibernate} |
+  {reply, Reply :: chat_server_response(), NewState :: #state{}} |
+  {reply, Reply :: chat_server_response(), NewState :: #state{}, timeout() | hibernate} |
   {noreply, NewState :: #state{}} |
   {noreply, NewState :: #state{}, timeout() | hibernate} |
   {stop, Reason :: term(), Reply :: term(), NewState :: #state{}} |
   {stop, Reason :: term(), NewState :: #state{}}).
-handle_call(Request, _From, State) ->
+handle_call(Request, From, State) ->
   io:format("received call: ~p~n", [Request]),
+  {Pid, Tag} = From,
+  #state{clients=Clients, messages=Messages} = State,
   case Request of
+    % user joining
+    {join, Username} -> 
+      case client_with_pid_exists(Pid, Clients) of
+        true -> {reply, already_joined, State};
+        false -> 
+          NewClients = [{Pid, Tag, Username}|Clients],
+          {reply, {history, Messages}, State#state{clients=NewClients}};
+        _ -> this_shouldnt_happen 
+      end;
+    {say, Text} ->
+      case get_username(Pid, Clients) of
+        false -> {reply, you_are_not_a_user_yet, State}; 
+        Username -> {reply, you_said_something, State#state{messages=[{Username,Text} | Messages]}}
+      end;
+    get_clients -> {reply, State#state.clients, State};
+    get_history -> {reply, State#state.messages, State};
     stop -> {stop, normal, shutdown_ok, State};
-    _ -> {reply, ok, State}
+    _ -> {reply, wat, State}
   end. 
 
 %%--------------------------------------------------------------------
@@ -159,3 +182,17 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+
+client_with_pid_exists(Pid, Clients) -> 
+  Pred = fun(Client) ->
+    {Client_pid, _Tag, _Name} = Client,
+    Client_pid == Pid 
+  end,
+  lists:any(Pred, Clients).
+
+-spec get_username(Pid :: pid(), Clients :: [client()]) -> false | string().
+ get_username(Pid, Clients) ->
+   case lists:keyfind(Pid, 1, Clients) of
+     {_Pid, _Tag, Username} -> Username;
+     false -> false
+   end.
