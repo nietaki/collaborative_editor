@@ -22,7 +22,7 @@ echo_loop(I) ->
   LineNo = integer_to_list(I),
   Input = io:fread("say sth " ++ LineNo ++ "> ", "~s"),
   case Input of
-    {ok, ["exit"]} -> ok;
+    {ok, ["exit"]} -> exit;
     {ok, [Word]} ->
       io:format("written " ++ LineNo ++ ": ~p~n", [Word]),
       echo_loop(I+1);
