@@ -14,6 +14,7 @@
 
 start(Foo) -> 
   io:format("function args are: ~p~n", [Foo]),
+  io:format("write words to have them echoed to you or write 'exit' to exit~n"),
   echo_loop(0),
   init:stop().
 
