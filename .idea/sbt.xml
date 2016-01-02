@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ScalaSbtSettings">
+    <option name="customLauncherEnabled" value="true" />
+    <option name="customLauncherPath" value="/usr/local/Cellar/sbt/0.13.9/libexec/sbt-launch.jar" />
+    <option name="customVMPath" value="/Library/Java/JavaVirtualMachines/jdk1.7.0_79.jdk/Contents/Home" />
+    <option name="maximumHeapSize" value="1024" />
+  </component>
+</project>
