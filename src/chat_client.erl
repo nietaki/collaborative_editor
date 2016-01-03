@@ -41,5 +41,5 @@ messaging_loop(Server) ->
 
 print_message(Message) ->
   case Message of
-    {Username, Text} -> io:format("<~p> ~p~n",[Username, Text])
+    {Username, Text} -> io:format("<~ts> ~ts~n",[Username, Text])
   end.
