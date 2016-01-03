@@ -107,7 +107,9 @@ handle_call(Request, From, State) ->
     {say, Text} ->
       case get_username(Pid, Clients) of
         false -> {reply, you_are_not_a_user_yet, State}; 
-        Username -> {reply, you_said_something, State#state{messages=[{Username,Text} | Messages]}}
+        Username -> 
+          send_message_to_clients(Username, Text, Clients),
+          {reply, you_said_something, State#state{messages=[{Username,Text} | Messages]}}
       end;
     get_clients -> {reply, State#state.clients, State};
     get_history -> {reply, State#state.messages, State};
@@ -191,8 +193,21 @@ client_with_pid_exists(Pid, Clients) ->
   lists:any(Pred, Clients).
 
 -spec get_username(Pid :: pid(), Clients :: [client()]) -> false | string().
- get_username(Pid, Clients) ->
-   case lists:keyfind(Pid, 1, Clients) of
-     {_Pid, _Tag, Username} -> Username;
-     false -> false
-   end.
+get_username(Pid, Clients) ->
+  case lists:keyfind(Pid, 1, Clients) of
+    {_Pid, _Tag, Username} -> Username;
+    false -> false
+  end.
+
+get_client_pid(Client) -> 
+  case Client of
+    {Pid, _Tag, _Username} -> Pid
+  end.
+
+send_message_to_clients(Username, Text, Clients) ->
+  Pids = lists:map(fun get_client_pid/1, Clients),
+  SendMessageToPid= fun(Pid) ->
+    gen_server:cast(Pid, {said, Username, Text})
+  end,
+  lists:foreach(SendMessageToPid, Pids).
+
