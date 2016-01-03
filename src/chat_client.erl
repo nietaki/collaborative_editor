@@ -9,10 +9,16 @@
 -module(chat_client).
 -author("nietaki").
 
-%% API
--export([start/2, messaging_loop/1, print_message/1]).
-
 -include("chat_types.hrl").
+
+-export([start_client1/0, start_client2/0, start/2, messaging_loop/1, print_message/1]).
+
+%% convenience functions
+start_client1() -> start("Jacek", {chat_server, serv@shiny}).
+start_client2() -> start("Frane", {chat_server, serv@shiny}). 
+
+%% API
+
 
 start(Username, Server) ->
   MessagingClientPid = spawn_link(?MODULE, messaging_loop, [Server]),
@@ -20,9 +26,15 @@ start(Username, Server) ->
   input_loop(MessagingClientPid).
 
 input_loop(MessagingClientPid) ->
-  Input = io:get_line(""),
-  MessagingClientPid ! {say, Input},
-  input_loop(MessagingClientPid).
+  Input = string:strip(io:get_line(""), both, $\n),
+  case Input of
+    "part" ->
+      io:format("disconnecting from the server~n"),
+      MessagingClientPid ! part;
+    _ ->
+      MessagingClientPid ! {say, Input},
+      input_loop(MessagingClientPid)
+  end. 
 
 messaging_loop(Server) -> 
   receive
@@ -36,7 +48,11 @@ messaging_loop(Server) ->
       messaging_loop(Server);
     {said, Username, Text} ->
       print_message({Username, Text}),
-      messaging_loop(Server)
+      messaging_loop(Server);
+    part -> 
+      gen_server:cast(Server, {part, self()}),
+      io:format("messaging loop finishing~n"),
+      init:stop()
   end.
 
 print_message(Message) ->

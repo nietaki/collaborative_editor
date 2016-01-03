@@ -42,6 +42,12 @@ echo: compile
 chat_server: compile
 	${ERL} -pa . -sname serv -setcookie pass -s chat_server start
 
+chat_client1: compile
+	${ERL} -noshell -pa . -sname client1 -setcookie pass -s chat_client start_client1 
+	
+chat_client2: compile
+	${ERL} -noshell -pa . -sname client2 -setcookie pass -s chat_client start_client2 
+
 #	${ERL} -pa Dir1  -s application1 start Arg1 Arg2 
 
 # the subdirs target compiles any code in 

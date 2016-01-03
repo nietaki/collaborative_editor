@@ -125,8 +125,19 @@ handle_call(Request, From, State) ->
   {noreply, NewState :: #state{}, timeout() | hibernate} |
   {stop, Reason :: term(), NewState :: #state{}}).
 handle_cast(Request, State) ->
-  io:format("server: received cast: ~p~n", [Request]),
-  {noreply, State}.
+  case Request of
+    {part, Pid} -> 
+      io:format("~p wants to part, removing it from clients~n", [Pid]),
+      no_reply_with_state_without_pid(State, Pid);
+    _ ->
+      io:format("server: received cast: ~p~n", [Request]),
+      {noreply, State}
+  end. 
+
+no_reply_with_state_without_pid(State, Pid) ->
+  OldClients = State#state.clients,
+  NewClients = get_clients_without_pid(Pid, OldClients),
+  {noreply, State#state{clients = NewClients}}. 
 
 %%--------------------------------------------------------------------
 %% @private
@@ -146,9 +157,7 @@ handle_info(Info, State) ->
   case Info of
     {'DOWN', _Ref, process, Pid, Why} ->
       io:format("~p has died because of ~p, removing it from clients~n", [Pid, Why]),
-      OldClients = State#state.clients,
-      NewClients = get_clients_without_pid(Pid, OldClients),
-      {noreply, State#state{clients = NewClients}};
+      no_reply_with_state_without_pid(State, Pid);
     _ ->
       io:format("server: received info: ~p~n", [Info]),
       {noreply, State}
