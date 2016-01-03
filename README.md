@@ -22,7 +22,10 @@ Terminal 2:
     % the erlang console opened
     chat_client:start("Jacek", {chat_server, serv@shiny}).
 
+or, easier:
+
+`make chat_client1`
+
 Terminal 3:
 
-    erl -sname client2 -setcookie pass
-    chat_client:start("Jacek", {chat_server, serv@shiny}).
+`make chat_client2`
