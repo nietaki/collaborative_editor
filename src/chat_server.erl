@@ -94,7 +94,8 @@ handle_call(Request, From, State) ->
     {join, Username} -> 
       case client_with_pid_exists(Pid, Clients) of
         true -> {reply, already_joined, State};
-        false -> 
+        false ->
+          erlang:monitor(process, Pid),
           NewClients = [{Pid, Tag, Username}|Clients],
           {reply, {history, Messages}, State#state{clients=NewClients}};
         _ -> this_shouldnt_happen 
@@ -142,8 +143,16 @@ handle_cast(Request, State) ->
   {noreply, NewState :: #state{}, timeout() | hibernate} |
   {stop, Reason :: term(), NewState :: #state{}}).
 handle_info(Info, State) ->
-  io:format("server: received info: ~p~n", [Info]),
-  {noreply, State}.
+  case Info of
+    {'DOWN', _Ref, process, Pid, Why} ->
+      io:format("~p has died because of ~p, removing it from clients~n", [Pid, Why]),
+      OldClients = State#state.clients,
+      NewClients = get_clients_without_pid(Pid, OldClients),
+      {noreply, State#state{clients = NewClients}};
+    _ ->
+      io:format("server: received info: ~p~n", [Info]),
+      {noreply, State}
+  end. 
 
 %%--------------------------------------------------------------------
 %% @private
@@ -180,12 +189,15 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
+client_has_pid(Client, Pid) ->
+  {Client_pid, _Tag, _Name} = Client,
+  Client_pid == Pid.
+
 client_with_pid_exists(Pid, Clients) -> 
-  Pred = fun(Client) ->
-    {Client_pid, _Tag, _Name} = Client,
-    Client_pid == Pid 
-  end,
-  lists:any(Pred, Clients).
+  lists:any(fun(C) -> client_has_pid(C, Pid) end, Clients).
+
+get_clients_without_pid(Pid, Clients) ->
+  lists:filter(fun(C) -> not client_has_pid(C, Pid) end, Clients). 
 
 -spec get_username(Pid :: pid(), Clients :: [client()]) -> false | string().
 get_username(Pid, Clients) ->
@@ -202,7 +214,7 @@ get_client_pid(Client) ->
 send_message_to_clients(Username, Text, Clients) ->
   Pids = lists:map(fun get_client_pid/1, Clients),
   SendMessageToPid= fun(Pid) ->
-    io:format("server: sending ~p to ~p", [{said, Username, Text}, Pid]),
+    io:format("server: sending ~p to ~p~n", [{said, Username, Text}, Pid]),
     Pid ! {said, Username, Text}
   end,
   lists:foreach(SendMessageToPid, Pids).
