@@ -13,7 +13,7 @@ ERL = erl -boot start_clean
 # to the end of the line and continue on the next line
 
 # Edit the lines below
-MODS = echo chat_server utils
+MODS = echo utils chat_server chat_client 
 
 #       module3 ... special1 ...\
 #       ...
@@ -40,7 +40,7 @@ echo: compile
 	${ERL} -noshell -pa . -s echo start Arg1 Arg2 
 
 chat_server: compile
-	${ERL} -pa . -s chat_server start
+	${ERL} -pa . -sname serv -setcookie pass -s chat_server start
 
 #	${ERL} -pa Dir1  -s application1 start Arg1 Arg2 
 

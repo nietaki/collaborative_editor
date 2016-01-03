@@ -26,12 +26,7 @@
 
 -define(SERVER, ?MODULE).
 
--type user_name() :: atom().
--type client() :: {pid(), tag(), user_name()}. % the tag() here is the unique tag
--type tag() :: term().
--type message() :: {user_name(), string()}.
--type command() :: {join, user_name()} | {say, string()} | part | get_clients | get_history.
--type chat_server_response() :: {said, user_name(), string()} | {history, [message()]} | already_joined | unknown_user.
+-include("chat_types.hrl").
 
 -record(state, {clients=[] :: [client()],messages=[] :: [message()]}).
 
@@ -91,7 +86,7 @@ init([]) ->
   {stop, Reason :: term(), Reply :: term(), NewState :: #state{}} |
   {stop, Reason :: term(), NewState :: #state{}}).
 handle_call(Request, From, State) ->
-  io:format("received call: ~p~n", [Request]),
+  io:format("server: received call: ~p~n", [Request]),
   {Pid, Tag} = From,
   #state{clients=Clients, messages=Messages} = State,
   case Request of
@@ -129,7 +124,7 @@ handle_call(Request, From, State) ->
   {noreply, NewState :: #state{}, timeout() | hibernate} |
   {stop, Reason :: term(), NewState :: #state{}}).
 handle_cast(Request, State) ->
-  io:format("received cast: ~p~n", [Request]),
+  io:format("server: received cast: ~p~n", [Request]),
   {noreply, State}.
 
 %%--------------------------------------------------------------------
@@ -147,7 +142,7 @@ handle_cast(Request, State) ->
   {noreply, NewState :: #state{}, timeout() | hibernate} |
   {stop, Reason :: term(), NewState :: #state{}}).
 handle_info(Info, State) ->
-  io:format("received info: ~p~n", [Info]),
+  io:format("server: received info: ~p~n", [Info]),
   {noreply, State}.
 
 %%--------------------------------------------------------------------
@@ -164,7 +159,7 @@ handle_info(Info, State) ->
 -spec(terminate(Reason :: (normal | shutdown | {shutdown, term()} | term()),
     State :: #state{}) -> term()).
 terminate(_Reason, _State) ->
-  io:format("terminating~n"),
+  io:format("server: terminating~n"),
   ok.
 
 %%--------------------------------------------------------------------
@@ -207,7 +202,8 @@ get_client_pid(Client) ->
 send_message_to_clients(Username, Text, Clients) ->
   Pids = lists:map(fun get_client_pid/1, Clients),
   SendMessageToPid= fun(Pid) ->
-    gen_server:cast(Pid, {said, Username, Text})
+    io:format("server: sending ~p to ~p", [{said, Username, Text}, Pid]),
+    Pid ! {said, Username, Text}
   end,
   lists:foreach(SendMessageToPid, Pids).
 
